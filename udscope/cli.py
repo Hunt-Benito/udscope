@@ -128,6 +128,7 @@ def cmd_secaccess(args) -> int:
     client = build_client(args)
     algo = security.get(args.algo)
     try:
+        client.set_session(Session.EXTENDED)
         resp = client.security_access(0x11, lambda seed: algo.fn(seed, 0x11))
         print(f"security access GRANTED: {resp.hex(' ')}")
         return 0

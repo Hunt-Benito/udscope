@@ -120,7 +120,6 @@ class DemoEcu:
         if level != Session.DEVELOPER:
             self.unlocked = False
             self._pending_seed = None
-            self.key_attempts = 0
         self.session = level
         return bytes([0x50, level, 0x00, 0x32, 0x01, 0xF4])
 
