@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "udscope"
+version = "0.1.0"
+description = "UDS + scope: a Linux-first toolkit for exploring Unified Diagnostic Services (ISO 14229) over CAN, with a virtual ECU simulator"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Hunt-Benito Limited" }]
+requires-python = ">=3.9"
+dependencies = [
+    "python-can>=4.0",
+    "can-isotp>=2.0",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Security",
+    "Topic :: System :: Networking",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.scripts]
+udscope = "udscope.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["udscope*"]
