@@ -136,9 +136,9 @@ class UdsClient:
     def read_by_address(self, address: int, length: int, addr_bytes: int = 4) -> bytes:
         if addr_bytes not in (2, 3, 4):
             raise ValueError("addr_bytes must be 2, 3 or 4")
-        if length > 0xFFF:
-            raise ValueError("length must fit in 12 bits (max 0xFFF)")
-        req = bytes([SID.READ_BY_ADDRESS, (addr_bytes << 4) | 0x4])
+        if length > 0xFFFF:
+            raise ValueError("length must fit in 16 bits")
+        req = bytes([SID.READ_BY_ADDRESS, (addr_bytes << 4) | 0x2])
         req += address.to_bytes(addr_bytes, "big") + length.to_bytes(2, "big")
         resp = self.request(req)
         return resp[1 + addr_bytes:]

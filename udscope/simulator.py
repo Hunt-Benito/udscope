@@ -121,7 +121,7 @@ class DemoEcu:
             self.unlocked = False
             self._pending_seed = None
         self.session = level
-        return bytes([0x50, level, 0x00, 0x32, 0x01, 0xF4])
+        return bytes([0x50, level, 0x00, 0x05, 0x01, 0xF4])
 
     def _hdl_reset(self, data: bytes) -> bytes:
         if len(data) < 2:
@@ -150,7 +150,7 @@ class DemoEcu:
         fmt = data[1]
         addr_bytes = fmt >> 4
         len_bytes = fmt & 0x0F
-        if addr_bytes not in (1, 2, 3, 4) or len_bytes != 4:
+        if addr_bytes not in (1, 2, 3, 4) or len_bytes != 2:
             return self._nrc(SID.READ_BY_ADDRESS, 0x13)
         if self.session != Session.DEVELOPER:
             return self._nrc(SID.READ_BY_ADDRESS, 0x7E)
