@@ -37,9 +37,12 @@ sudo ip link set up vcan0
 
 ## Quickstart (two terminals)
 
+Both terminals must have the venv active (`source .venv/bin/activate` in each).
+
 Terminal 1 — start the demo ECU:
 
 ```console
+$ source .venv/bin/activate
 $ udscope sim
 udscope 0.1.0 — demo ECU on socketcan:vcan0 (0x7E0 -> 0x7E8)
 Level 0x11 seed-key algorithm: xor_shift_demo | Ctrl-C to stop
@@ -48,6 +51,7 @@ Level 0x11 seed-key algorithm: xor_shift_demo | Ctrl-C to stop
 Terminal 2 — run the guided walkthrough:
 
 ```console
+$ source .venv/bin/activate
 $ udscope demo
 == udscope guided demo against socketcan:vcan0 ==
 [TX] 7E0  3e 00
