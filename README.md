@@ -17,10 +17,15 @@ udscope is the companion framework of the automotive security article series on 
 ## Install
 
 ```bash
+python3 -m venv .venv && source .venv/bin/activate
 pip install git+https://github.com/Hunt-Benito/udscope
 ```
 
 Requires Python 3.9+, `python-can` and `can-isotp` (installed automatically).
+
+> **Note** — on Debian 12 / Ubuntu 23.04+ the system Python is "externally managed" (PEP 668) and
+> `pip install` outside a virtualenv fails with `error: externally-managed-environment`. Use the
+> venv as shown above (or `pipx` if you only want the CLI).
 
 ## Set up a virtual CAN bus (no hardware needed)
 
