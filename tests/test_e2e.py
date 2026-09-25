@@ -93,11 +93,11 @@ def test_developer_session_requires_unlock(pair):
 def test_read_by_address_requires_dev_session_and_unlock(pair):
     pair.set_session(Session.EXTENDED)
     with pytest.raises(NegativeResponseError) as exc:
-        pair.read_by_address(0x00080000, 16)
+        pair.read_by_address(0x00C0DE00, 16)
     assert exc.value.nrc == 0x7E
     pair.security_access(0x11, lambda seed: security.xor_shift_demo(seed, 0x11))
     pair.set_session(Session.DEVELOPER)
-    blob = pair.read_by_address(0x00080000, 16)
+    blob = pair.read_by_address(0x00C0DE00, 16)
     assert blob.startswith(b"UDSCOPE DEMO FIR")
 
 
@@ -106,7 +106,7 @@ def test_read_by_address_out_of_range(pair):
     pair.security_access(0x11, lambda seed: security.xor_shift_demo(seed, 0x11))
     pair.set_session(Session.DEVELOPER)
     with pytest.raises(NegativeResponseError) as exc:
-        pair.read_by_address(0x00090000, 8)
+        pair.read_by_address(0x00D00000, 8)
     assert exc.value.nrc == 0x31
 
 
