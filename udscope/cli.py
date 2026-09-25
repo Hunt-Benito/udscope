@@ -151,6 +151,98 @@ def cmd_secaccess(args) -> int:
         client.link.stop()
 
 
+def cmd_shell(args) -> int:
+    client = build_client(args)
+    client.start_keepalive()
+    print(f"udscope {__version__} shell — target {args.target} on {args.bus}:{args.channel}")
+    print("type 'help' for commands, raw UDS hex also works, Ctrl-D to quit")
+    while True:
+        try:
+            line = input("udscope> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            break
+        if not line:
+            continue
+        parts = line.split()
+        verb = parts[0].lower()
+        rest = parts[1:]
+        try:
+            if verb in ("quit", "exit"):
+                break
+            elif verb == "help":
+                print(SHELL_HELP)
+            elif verb == "keepalive":
+                flag = rest[0].lower() if rest else ""
+                if flag == "off":
+                    client.stop_keepalive()
+                    print("keep-alive off — non-default sessions now expire after S3 (5 s)")
+                elif flag == "on":
+                    client.start_keepalive()
+                    print("keep-alive on")
+                else:
+                    print("usage: keepalive on|off")
+            elif verb == "session":
+                resp = client.set_session(int(rest[0], 0))
+                print(f"session accepted: {resp.hex(' ')}")
+            elif verb in ("read-did", "did"):
+                did = int(rest[0], 0)
+                resp = client.read_did(did)
+                print(f"0x{did:04X}: {resp.hex(' ')}")
+            elif verb == "vin":
+                print(client.read_vin())
+            elif verb == "ident":
+                for did, label in ((0xF190, "VIN"), (0xF187, "Part number"),
+                                   (0xF18A, "ECU ID"), (0xF195, "System name")):
+                    try:
+                        resp = client.read_did(did)
+                        print(f"  {label:<12} 0x{did:04X}  "
+                              f"{resp[3:].decode('ascii', errors='replace').strip()}")
+                    except (NegativeResponseError, UdsTimeout) as exc:
+                        print(f"  {label:<12} 0x{did:04X}  [{exc}]")
+            elif verb == "secaccess":
+                algo = security.get(rest[0]) if rest else security.get("xor_shift_demo")
+                resp = client.security_access(0x11, lambda seed: algo.fn(seed, 0x11))
+                print(f"security access GRANTED: {resp.hex(' ')}")
+            elif verb == "algorithms":
+                for algo in security.list_algorithms():
+                    print(f"  {algo.name:<16} {algo.description}")
+            elif verb == "reset":
+                resp = client.ecu_reset()
+                print(f"reset accepted: {resp.hex(' ')}")
+            else:
+                tokens = line.replace(" ", "")
+                if len(tokens) % 2 or not all(c in "0123456789abcdefABCDEF" for c in tokens):
+                    print(f"unrecognized command or bad hex: {line!r} (try 'help')")
+                    continue
+                resp = client.request(bytes.fromhex(tokens))
+                print(f"-> {resp.hex(' ')}")
+        except IndexError:
+            print("missing argument (try 'help')")
+        except NegativeResponseError as exc:
+            print(f"NRC {exc.nrc:02X}: {exc.description}")
+        except UdsTimeout as exc:
+            print(f"timeout: {exc}")
+        except ValueError as exc:
+            print(f"error: {exc}")
+    client.stop_keepalive()
+    client.link.stop()
+    return 0
+
+
+SHELL_HELP = """commands:
+  session <level>       switch diagnostic session (e.g. session 03)
+  read-did <did>        read a data identifier (e.g. read-did F190)
+  vin                   read the VIN
+  ident                 read common identification DIDs
+  secaccess [algo]      run the 0x27 seed-key handshake (default xor_shift_demo)
+  algorithms            list registered seed-key algorithms
+  keepalive on|off      background TesterPresent (default: on)
+  reset                 hard-reset the ECU (sessions relock)
+  quit                  exit the shell
+any other input is sent as raw UDS hex, e.g.:  22 f1 90   or   10 03"""
+
+
 def cmd_algorithms(args) -> int:
     for algo in security.list_algorithms():
         print(f"  {algo.name:<16} seed={algo.seed_len}B key={algo.key_len}B  {algo.description}")
@@ -291,6 +383,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--algo", default="xor_shift_demo", help="algorithm name (default: xor_shift_demo)")
     p.add_argument("--level", type=lambda x: int(x, 0), default=0x11, help="send-seed level (default: 0x11)")
     p.set_defaults(func=cmd_secaccess)
+
+    p = sub.add_parser("shell", help="interactive UDS shell (stateful, keep-alive on)")
+    add_transport_args(p)
+    p.set_defaults(func=cmd_shell)
 
     p = sub.add_parser("algorithms", help="list registered seed-key algorithms")
     p.set_defaults(func=cmd_algorithms)

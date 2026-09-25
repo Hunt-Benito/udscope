@@ -51,13 +51,15 @@ class IsotpLink:
         if self._owns_bus:
             self.bus.shutdown()
 
-    def send(self, payload: bytes) -> None:
-        self.logger("TX", self.tx_id, bytes(payload))
+    def send(self, payload: bytes, log: bool = True) -> None:
+        if log:
+            self.logger("TX", self.tx_id, bytes(payload))
         self.stack.send(payload)
 
-    def recv(self, block: bool = True, timeout: Optional[float] = None) -> Optional[bytes]:
+    def recv(self, block: bool = True, timeout: Optional[float] = None,
+             log: bool = True) -> Optional[bytes]:
         data = self.stack.recv(block=block, timeout=timeout)
-        if data is not None:
+        if data is not None and log:
             self.logger("RX", self.rx_id, bytes(data))
         return bytes(data) if data is not None else None
 

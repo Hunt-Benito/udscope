@@ -93,11 +93,17 @@ class UdsClient:
         self.link = link
         self.timeout = timeout
         self.p2_star_max = p2_star_max
+        self._req_lock = threading.RLock()
 
-    def request(self, data: bytes, timeout: Optional[float] = None) -> bytes:
+    def request(self, data: bytes, timeout: Optional[float] = None, quiet: bool = False) -> bytes:
+        with self._req_lock:
+            return self._request_locked(data, timeout, quiet)
+
+    def _request_locked(self, data: bytes, timeout: Optional[float] = None,
+                        quiet: bool = False) -> bytes:
         deadline = time.monotonic() + (timeout or self.timeout)
         expected_sid = data[0] | 0x40
-        self.link.send(bytes(data))
+        self.link.send(bytes(data), log=not quiet)
         pending = 0
         while True:
             remaining = deadline - time.monotonic()
@@ -106,7 +112,7 @@ class UdsClient:
                     f"no response within {timeout or self.timeout:.1f}s"
                     + (f" (after {pending} NRC 0x78 pending)" if pending else "")
                 )
-            resp = self.link.recv(block=True, timeout=remaining)
+            resp = self.link.recv(block=True, timeout=remaining, log=not quiet)
             if resp is None:
                 raise TimeoutError_(
                     f"no response within {timeout or self.timeout:.1f}s"
@@ -166,7 +172,7 @@ class UdsClient:
         def _pinger() -> None:
             while not self._keepalive_stop.wait(period):
                 try:
-                    self.tester_present()
+                    self.request(bytes([0x3E, 0x00]), quiet=True)
                 except Exception:
                     pass
 
@@ -177,3 +183,6 @@ class UdsClient:
         stop = getattr(self, "_keepalive_stop", None)
         if stop is not None:
             stop.set()
+        thread = getattr(self, "_keepalive_thread", None)
+        if thread is not None and thread.is_alive() and thread is not threading.current_thread():
+            thread.join(timeout=2.0)
