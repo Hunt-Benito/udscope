@@ -134,3 +134,20 @@ def test_s3_timeout_relocks(pair):
     with pytest.raises(NegativeResponseError) as exc:
         pair.read_did(0xF22B)
     assert exc.value.nrc == 0x7E
+
+
+def test_sim_address_pair_orientation():
+    from udscope.cli import sim_address_pair
+    tx, rx = sim_address_pair()
+    assert tx == 0x7E8 and rx == 0x7E0
+
+
+def test_keepalive_holds_session_across_s3(pair):
+    pair.set_session(Session.EXTENDED)
+    pair.start_keepalive(period=1.0)
+    try:
+        time.sleep(5.5)
+        resp = pair.read_did(0xF22B)
+        assert resp[:3] == bytes([0x62, 0xF2, 0x2B])
+    finally:
+        pair.stop_keepalive()

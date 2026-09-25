@@ -8,7 +8,7 @@ import threading
 import time
 
 from . import __version__, security
-from .simulator import DemoEcu
+from .simulator import DemoEcu, MEMORY_MAP
 from .targets import FUNCTIONAL_REQUEST_ID, STANDARD_ECUs, TARGETS, resolve
 from .transport import IsotpLink, make_bus
 from .uds import NegativeResponseError, Session, SID, TimeoutError_ as UdsTimeout, UdsClient
@@ -36,10 +36,19 @@ def quiet_logger(direction: str, arb_id: int, data: bytes) -> None:
     pass
 
 
+def make_sim_link(args) -> IsotpLink:
+    return IsotpLink(*sim_address_pair(), channel=args.channel, interface=args.bus)
+
+
+def sim_address_pair():
+    return 0x7E8, 0x7E0
+
+
 def cmd_sim(args) -> int:
-    link = IsotpLink(0x7E0, 0x7E8, channel=args.channel, interface=args.bus)
+    link = make_sim_link(args)
     ecu = DemoEcu(link)
-    print(f"udscope {__version__} — demo ECU on {args.bus}:{args.channel} (0x7E0 -> 0x7E8)")
+    print(f"udscope {__version__} — demo ECU on {args.bus}:{args.channel} "
+          f"(requests 0x7E0, responses 0x7E8)")
     print("Level 0x11 seed-key algorithm: xor_shift_demo | Ctrl-C to stop")
     try:
         ecu.serve_forever()
@@ -148,6 +157,73 @@ def cmd_algorithms(args) -> int:
     return 0
 
 
+def cmd_sweep_dids(args) -> int:
+    client = build_client(args)
+    found = 0
+    try:
+        client.set_session(args.level)
+        client.start_keepalive()
+        print(f"sweeping DIDs 0x{args.start:04X}-0x{args.end:04X} in session 0x{args.level:02X} "
+              f"(Ctrl-C to abort)")
+        for did in range(args.start, args.end + 1):
+            try:
+                resp = client.read_did(did)
+            except NegativeResponseError:
+                continue
+            except UdsTimeout:
+                continue
+            data = resp[3:]
+            printable = "".join(chr(b) if 32 <= b < 127 else "." for b in data[:24])
+            print(f"  0x{did:04X}  len={len(data):3d}  {data[:16].hex(' '):<49}  |{printable}|")
+            found += 1
+        print(f"{found} DIDs responded")
+        return 0
+    except KeyboardInterrupt:
+        print(f"\naborted, {found} DIDs found so far")
+        return 1
+    finally:
+        client.stop_keepalive()
+        client.link.stop()
+
+
+def cmd_dump(args) -> int:
+    client = build_client(args)
+    algo = security.get(args.algo)
+    try:
+        client.set_session(Session.EXTENDED)
+        client.security_access(args.seclevel, lambda seed: algo.fn(seed, args.seclevel))
+        client.set_session(Session.DEVELOPER)
+        client.start_keepalive()
+        print(f"dumping 0x{args.start:08X}-0x{args.start + args.length - 1:08X} "
+              f"in {args.chunk}-byte chunks -> {args.out}")
+        blob = bytearray()
+        offset = 0
+        while offset < args.length:
+            n = min(args.chunk, args.length - offset)
+            for attempt in (1, 2):
+                try:
+                    chunk = client.read_by_address(args.start + offset, n)
+                    break
+                except UdsTimeout:
+                    if attempt == 2:
+                        raise
+            blob += chunk
+            offset += len(chunk)
+            if len(chunk) < n:
+                print(f"\n  note: ECU returned {len(chunk)} of {n} requested bytes at "
+                      f"0x{args.start + offset:08X}")
+            done = 100 * offset // args.length
+            print(f"\r  {offset}/{args.length} bytes  [{done:3d}%]", end="", flush=True)
+        print()
+        with open(args.out, "wb") as fh:
+            fh.write(blob)
+        print(f"wrote {len(blob)} bytes to {args.out}")
+        return 0
+    finally:
+        client.stop_keepalive()
+        client.link.stop()
+
+
 def cmd_demo(args) -> int:
     client = build_client(args)
     print(f"== udscope guided demo against {args.bus}:{args.channel} ==")
@@ -163,8 +239,9 @@ def cmd_demo(args) -> int:
         print("   ", resp.hex(" "), "-> unlocked")
         print("\n[5] enter developer session 0x60")
         print("   ", client.set_session(Session.DEVELOPER).hex(" "))
-        print("\n[6] read memory by address 0x00080000, 32 bytes")
-        blob = client.read_by_address(0x00080000, 32)
+        demo_address = next(iter(MEMORY_MAP))[0]
+        print(f"\n[6] read memory by address 0x{demo_address:08X}, 32 bytes")
+        blob = client.read_by_address(demo_address, 32)
         print("   ", blob[:32].decode("ascii", errors="replace"))
         print("\ndemo complete.")
         return 0
@@ -217,6 +294,26 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("algorithms", help="list registered seed-key algorithms")
     p.set_defaults(func=cmd_algorithms)
+
+    p = sub.add_parser("sweep-dids", help="inventory DIDs by probing a range (0x22 sweep)")
+    add_transport_args(p)
+    p.add_argument("--start", type=lambda x: int(x, 0), default=0xF000, help="first DID (default 0xF000)")
+    p.add_argument("--end", type=lambda x: int(x, 0), default=0xF2FF, help="last DID (default 0xF2FF)")
+    p.add_argument("--level", type=lambda x: int(x, 0), default=Session.EXTENDED,
+                   help="session level for the sweep (default 0x03)")
+    p.set_defaults(func=cmd_sweep_dids)
+
+    p = sub.add_parser("dump", help="dump an ECU memory range via ReadMemoryByAddress (0x23)")
+    add_transport_args(p)
+    p.add_argument("--start", type=lambda x: int(x, 0), required=True, help="start address")
+    p.add_argument("--length", type=lambda x: int(x, 0), required=True, help="number of bytes")
+    p.add_argument("--chunk", type=lambda x: int(x, 0), default=128, help="bytes per 0x23 request")
+    p.add_argument("--out", default="dump.bin", help="output file (default dump.bin)")
+    p.add_argument("--seclevel", type=lambda x: int(x, 0), default=0x11,
+                   help="security access send-seed level (default 0x11)")
+    p.add_argument("--algo", default="xor_shift_demo",
+                   help="seed-key algorithm name (default xor_shift_demo)")
+    p.set_defaults(func=cmd_dump)
 
     p = sub.add_parser("demo", help="guided end-to-end walkthrough (needs `udscope sim` running)")
     add_transport_args(p)

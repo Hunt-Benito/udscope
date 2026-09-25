@@ -11,7 +11,8 @@ udscope is the companion framework of the automotive security article series on 
 - **UDS client** — request/response with negative-response (NRC) decoding, `0x78` response-pending handling, and helpers for the services you use most: session control, tester present, read/write DID, security access, read-memory-by-address.
 - **ECU simulator** (`udscope sim`) — a synthetic ECU on `vcan0` implementing a realistic UDS subset: session gating (default/extended/developer), security access with attempt limiting and lockout penalty, DID database, memory reads, S3 tester-present timeout.
 - **Pluggable seed-key registry** — register `seed -> key` algorithms and use them in the `0x27` handshake. Ships with synthetic exercises; add your own (from papers you are licensed to use) in one function.
-- **CLI** — `scan`, `ident`, `vin`, `session`, `read-did`, `secaccess`, `demo`, `algorithms`.
+- **CLI** — `scan`, `ident`, `vin`, `session`, `read-did`, `secaccess`, `demo`, `algorithms`, `sweep-dids` (DID inventory), `dump` (memory-range dumper via 0x23).
+- **Session keep-alive** — optional background TesterPresent so long campaigns survive the S3 timeout on real ECUs.
 - **Library** — everything the CLI does is available programmatically (`UdsClient`, `IsotpLink`, `DemoEcu`).
 
 ## Install
@@ -44,7 +45,7 @@ Terminal 1 — start the demo ECU:
 ```console
 $ source .venv/bin/activate
 $ udscope sim
-udscope 0.1.0 — demo ECU on socketcan:vcan0 (0x7E0 -> 0x7E8)
+udscope 0.2.0 — demo ECU on socketcan:vcan0 (0x7E0 -> 0x7E8)
 Level 0x11 seed-key algorithm: xor_shift_demo | Ctrl-C to stop
 ```
 
@@ -67,6 +68,8 @@ Other commands:
 ```bash
 udscope scan                 # probe ISO 15765-4 slots 0x7E0-0x7E7 for responders
 udscope ident                # read common identification DIDs
+udscope sweep-dids           # DID inventory over a range (extend of 'sweepDIDs')
+udscope dump --start 0x00C0DE00 --length 0x80 --out dump.bin
 udscope session --level 0x03
 udscope read-did --did 0xF190
 udscope secaccess --algo xor_shift_demo

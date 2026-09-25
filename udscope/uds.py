@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from typing import Optional
 
@@ -95,6 +96,7 @@ class UdsClient:
 
     def request(self, data: bytes, timeout: Optional[float] = None) -> bytes:
         deadline = time.monotonic() + (timeout or self.timeout)
+        expected_sid = data[0] | 0x40
         self.link.send(bytes(data))
         pending = 0
         while True:
@@ -110,12 +112,13 @@ class UdsClient:
                     f"no response within {timeout or self.timeout:.1f}s"
                     + (f" (after {pending} NRC 0x78 pending)" if pending else "")
                 )
-            if len(resp) >= 3 and resp[0] == 0x7F and resp[2] == 0x78:
+            if len(resp) >= 3 and resp[0] == 0x7F and resp[2] == 0x78 and resp[1] == data[0]:
                 pending += 1
                 continue
-            if len(resp) >= 3 and resp[0] == 0x7F:
+            if len(resp) >= 3 and resp[0] == 0x7F and resp[1] == data[0]:
                 raise NegativeResponseError(resp[1], resp[2])
-            return resp
+            if resp and resp[0] == expected_sid:
+                return resp
 
     def set_session(self, level: int) -> bytes:
         return self.request(bytes([SID.DIAGNOSTIC_SESSION_CONTROL, level & 0x7F]))
@@ -153,3 +156,24 @@ class UdsClient:
         key_len = max(1, (key.bit_length() + 7) // 8)
         key_bytes = key.to_bytes(key_len, "big")
         return self.request(bytes([SID.SECURITY_ACCESS, (send_level + 1) & 0xFF]) + key_bytes)
+
+    def start_keepalive(self, period: float = 2.0) -> None:
+        """Background TesterPresent so non-default sessions survive the S3 timeout."""
+        if getattr(self, "_keepalive_thread", None) and self._keepalive_thread.is_alive():
+            return
+        self._keepalive_stop = threading.Event()
+
+        def _pinger() -> None:
+            while not self._keepalive_stop.wait(period):
+                try:
+                    self.tester_present()
+                except Exception:
+                    pass
+
+        self._keepalive_thread = threading.Thread(target=_pinger, daemon=True)
+        self._keepalive_thread.start()
+
+    def stop_keepalive(self) -> None:
+        stop = getattr(self, "_keepalive_stop", None)
+        if stop is not None:
+            stop.set()
