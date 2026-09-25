@@ -45,16 +45,28 @@ Terminal 1 — start the demo ECU:
 ```console
 $ source .venv/bin/activate
 $ udscope sim
-udscope 0.2.1 — demo ECU on socketcan:vcan0 (0x7E0 -> 0x7E8)
+udscope 0.2.1 — demo ECU on socketcan:vcan0 (requests 0x7E0, responses 0x7E8)
 Level 0x11 seed-key algorithm: xor_shift_demo | Ctrl-C to stop
 ```
 
-Terminal 2 — interactive shell or the guided walkthrough:
+Terminal 2 — the interactive shell (recommended; type `help` inside for all commands):
 
 ```console
 $ source .venv/bin/activate
 $ udscope shell
+udscope 0.2.1 shell — target demo on socketcan:vcan0
+type 'help' for commands, raw UDS hex also works, Ctrl-D to quit
+udscope> session 0x03
+udscope> read-did 0xF190
+udscope> 22 f1 90            <- raw UDS hex works too
 ```
+
+The shell is **stateful**: one connection for the whole session, with a background
+TesterPresent keeping non-default sessions alive past the S3 timeout (5 s). Use
+`keepalive off` inside the shell to stop the background pinger — then non-default
+sessions expire after 5 s of silence, which is the standard way to observe S3
+behaviour (`keepalive on` re-enables it). Library users get the same control via
+`UdsClient.start_keepalive()` / `stop_keepalive()`.
 
 or the scripted tour:
 
