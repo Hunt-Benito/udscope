@@ -151,3 +151,13 @@ def test_keepalive_holds_session_across_s3(pair):
         assert resp[:3] == bytes([0x62, 0xF2, 0x2B])
     finally:
         pair.stop_keepalive()
+
+
+def test_multiframe_did_read(pair):
+    with pytest.raises(NegativeResponseError) as exc:
+        pair.read_did(0xF242)
+    assert exc.value.nrc == 0x7E
+    pair.set_session(Session.EXTENDED)
+    resp = pair.read_did(0xF242)
+    assert len(resp) == 3 + 45
+    assert resp[3:].startswith(b"UDSCOPE-CAL-DEMO")

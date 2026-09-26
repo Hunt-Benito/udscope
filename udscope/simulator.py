@@ -35,6 +35,10 @@ MEMORY_MAP = {
     )[:0x80].ljust(0x80, b"."),
 }
 
+CALIBRATION_SUMMARY = (
+    b"UDSCOPE-CAL-DEMO | idle=850rpm | limiter=6200rpm | vbat=13.8V"
+)[:45].ljust(45, b" ")
+
 DID_DB = {
     0xF190: {"data": b"UDSCOPEDEMOECU001", "sessions": {Session.DEFAULT, Session.EXTENDED, Session.DEVELOPER}},
     0xF187: {"data": b"UDS-DEMO-ECU-01", "sessions": {Session.DEFAULT, Session.EXTENDED, Session.DEVELOPER}},
@@ -42,6 +46,7 @@ DID_DB = {
     0xF195: {"data": b"UDS01.000.000", "sessions": {Session.DEFAULT, Session.EXTENDED, Session.DEVELOPER}},
     0xF22B: {"data": b"\x00\x64\x00\xC8", "sessions": {Session.EXTENDED, Session.DEVELOPER}},
     0xF22C: {"data": os.urandom(8), "sessions": {Session.DEVELOPER}},
+    0xF242: {"data": CALIBRATION_SUMMARY, "sessions": {Session.EXTENDED, Session.DEVELOPER}},
 }
 
 SESSIONS_SUPPORTED = {Session.DEFAULT, Session.EXTENDED, Session.DEVELOPER}
