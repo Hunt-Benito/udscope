@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import threading
 import time
+
+try:
+    import readline
+except ImportError:
+    readline = None
 
 from . import __version__, security
 from .simulator import DemoEcu, MEMORY_MAP
@@ -182,9 +188,41 @@ def cmd_secaccess(args) -> int:
         client.link.stop()
 
 
+HISTORY_FILE = os.path.join(os.path.expanduser("~"), ".config", "udscope", "shell_history")
+
+
+def _init_readline_history() -> None:
+    if readline is None:
+        return
+    try:
+        os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
+        if os.path.exists(HISTORY_FILE):
+            readline.read_history_file(HISTORY_FILE)
+    except OSError:
+        pass
+
+
+def _save_readline_history() -> None:
+    if readline is None:
+        return
+    try:
+        os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
+        readline.write_history_file(HISTORY_FILE)
+    except OSError:
+        pass
+
+
+def format_history(entries, count=None) -> str:
+    shown = entries if count is None else entries[-max(0, count):]
+    start = len(entries) - len(shown) + 1
+    return "\n".join(f"  {i:4d}  {item}" for i, item in enumerate(shown, start=start))
+
+
 def cmd_shell(args) -> int:
     client = build_client(args)
     client.start_keepalive()
+    _init_readline_history()
+    session_history = []
     print(f"udscope {__version__} shell — target {args.target} on {args.bus}:{args.channel}")
     print("type 'help' for commands, raw UDS hex also works, Ctrl-D to quit")
     while True:
@@ -195,6 +233,11 @@ def cmd_shell(args) -> int:
             break
         if not line:
             continue
+        session_history.append(line)
+        if readline is not None:
+            length = readline.get_current_history_length()
+            if length == 0 or readline.get_history_item(length) != line:
+                readline.add_history(line)
         parts = line.split()
         verb = parts[0].lower()
         rest = parts[1:]
@@ -238,6 +281,16 @@ def cmd_shell(args) -> int:
             elif verb == "algorithms":
                 for algo in security.list_algorithms():
                     print(f"  {algo.name:<16} {algo.description}")
+            elif verb == "history":
+                count = None
+                if rest:
+                    try:
+                        count = int(rest[0])
+                    except ValueError:
+                        print("usage: history [n]")
+                        continue
+                out = format_history(session_history, count)
+                print(out if out else "(no history yet)")
             elif verb == "reset":
                 resp = client.ecu_reset()
                 print(f"reset accepted: {resp.hex(' ')}")
@@ -258,6 +311,7 @@ def cmd_shell(args) -> int:
             print(f"error: {exc}")
     client.stop_keepalive()
     client.link.stop()
+    _save_readline_history()
     return 0
 
 
@@ -269,6 +323,8 @@ SHELL_HELP = """commands:
   secaccess [algo]      run the 0x27 seed-key handshake (default xor_shift_demo)
   algorithms            list registered seed-key algorithms
   keepalive on|off      background TesterPresent (default: on)
+  history [n]           show session command history (last n; up-arrow recalls it,
+                       and it persists across sessions in ~/.config/udscope/shell_history)
   reset                 hard-reset the ECU (sessions relock)
   quit                  exit the shell
 any other input is sent as raw UDS hex, e.g.:  22 f1 90   or   10 03"""
