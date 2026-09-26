@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "udscope"
-version = "0.2.1"
+version = "0.3.0"
 description = "UDS + scope: a Linux-first toolkit for exploring Unified Diagnostic Services (ISO 14229) over CAN, with a virtual ECU simulator"
 readme = "README.md"
 license = { text = "MIT" }

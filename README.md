@@ -11,7 +11,7 @@ udscope is the companion framework of the automotive security article series on 
 - **UDS client** — request/response with negative-response (NRC) decoding, `0x78` response-pending handling, and helpers for the services you use most: session control, tester present, read/write DID, security access, read-memory-by-address.
 - **ECU simulator** (`udscope sim`) — a synthetic ECU on `vcan0` implementing a realistic UDS subset: session gating (default/extended/developer), security access with attempt limiting and lockout penalty, DID database, memory reads, S3 tester-present timeout.
 - **Pluggable seed-key registry** — register `seed -> key` algorithms and use them in the `0x27` handshake. Ships with synthetic exercises; add your own (from papers you are licensed to use) in one function.
-- **CLI** — `scan`, `ident`, `vin`, `session`, `read-did`, `secaccess`, `demo`, `algorithms`, `sweep-dids` (DID inventory), `dump` (memory-range dumper via 0x23), `shell` (interactive, stateful UDS console with keep-alive and raw-hex input).
+- **CLI** — `scan`, `ident`, `vin`, `session`, `read-did`, `secaccess`, `demo`, `algorithms`, `sweep-dids` (DID inventory), `dump` (memory-range dumper via 0x23), `shell` (interactive, stateful UDS console with keep-alive and raw-hex input), `setup` (vcan interface management).
 - **Session keep-alive** — optional background TesterPresent so long campaigns survive the S3 timeout on real ECUs.
 - **Library** — everything the CLI does is available programmatically (`UdsClient`, `IsotpLink`, `DemoEcu`).
 
@@ -30,11 +30,24 @@ Requires Python 3.9+, `python-can` and `can-isotp` (installed automatically).
 
 ## Set up a virtual CAN bus (no hardware needed)
 
+udscope manages `vcan*` interfaces automatically: every command verifies the
+interface first and, if it is missing or down, creates it via sudo — the sudo
+prompt itself explains why root is required. To do it explicitly:
+
+```bash
+udscope setup          # verify vcan0; create via sudo if missing
+```
+
+Equivalent manual commands (what udscope runs under the hood):
+
 ```bash
 sudo modprobe vcan
 sudo ip link add dev vcan0 type vcan
 sudo ip link set up vcan0
 ```
+
+Disable the automatic behaviour with `UDSCOPE_NO_AUTO_SETUP=1`. Real hardware
+channels (`can0`, `slcan`, ...) are never touched.
 
 ## Quickstart (two terminals)
 
@@ -45,7 +58,7 @@ Terminal 1 — start the demo ECU:
 ```console
 $ source .venv/bin/activate
 $ udscope sim
-udscope 0.2.1 — demo ECU on socketcan:vcan0 (requests 0x7E0, responses 0x7E8)
+udscope 0.3.0 — demo ECU on socketcan:vcan0 (requests 0x7E0, responses 0x7E8)
 Level 0x11 seed-key algorithm: xor_shift_demo | Ctrl-C to stop
 ```
 
@@ -54,7 +67,7 @@ Terminal 2 — the interactive shell (recommended; type `help` inside for all co
 ```console
 $ source .venv/bin/activate
 $ udscope shell
-udscope 0.2.1 shell — target demo on socketcan:vcan0
+udscope 0.3.0 shell — target demo on socketcan:vcan0
 type 'help' for commands, raw UDS hex also works, Ctrl-D to quit
 udscope> session 0x03
 udscope> read-did 0xF190

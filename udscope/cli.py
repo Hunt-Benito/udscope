@@ -12,6 +12,15 @@ from .simulator import DemoEcu, MEMORY_MAP
 from .targets import FUNCTIONAL_REQUEST_ID, STANDARD_ECUs, TARGETS, resolve
 from .transport import IsotpLink, make_bus
 from .uds import NegativeResponseError, Session, SID, TimeoutError_ as UdsTimeout, UdsClient
+from .vcan import MANUAL_INSTRUCTIONS, ensure_vcan
+
+
+def prepare_bus(args) -> bool:
+    ok = ensure_vcan(channel=args.channel, interface=args.bus)
+    if not ok:
+        print(f"[setup] could not prepare {args.channel}\n" + MANUAL_INSTRUCTIONS.format(
+            channel=args.channel), file=sys.stderr)
+    return ok
 
 
 def add_transport_args(parser: argparse.ArgumentParser) -> None:
@@ -24,6 +33,8 @@ def add_transport_args(parser: argparse.ArgumentParser) -> None:
 
 
 def build_client(args) -> UdsClient:
+    if not prepare_bus(args):
+        sys.exit(2)
     target = resolve(args.target)
     tx_id = args.txid if args.txid is not None else target.tx_id
     rx_id = args.rxid if args.rxid is not None else target.rx_id
@@ -44,7 +55,22 @@ def sim_address_pair():
     return 0x7E8, 0x7E0
 
 
+def cmd_setup(args) -> int:
+    if args.channel.startswith("vcan") and args.bus == "socketcan":
+        if ensure_vcan(channel=args.channel, interface=args.bus):
+            print(f"{args.channel} is present and up")
+            return 0
+        print("could not set up the interface automatically.\n"
+              + MANUAL_INSTRUCTIONS.format(channel=args.channel), file=sys.stderr)
+        return 1
+    print("automatic setup only manages vcan* channels on the socketcan interface —\n"
+          f"nothing to do for {args.bus}:{args.channel}", file=sys.stderr)
+    return 1
+
+
 def cmd_sim(args) -> int:
+    if not prepare_bus(args):
+        return 2
     link = make_sim_link(args)
     ecu = DemoEcu(link)
     print(f"udscope {__version__} — demo ECU on {args.bus}:{args.channel} "
@@ -59,6 +85,8 @@ def cmd_sim(args) -> int:
 
 
 def cmd_scan(args) -> int:
+    if not prepare_bus(args):
+        return 2
     bus = make_bus(args.channel, args.bus)
     found = 0
     print(f"probing standard ISO 15765-4 slots on {args.bus}:{args.channel} ...")
@@ -351,6 +379,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"udscope {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
+
+    p = sub.add_parser("setup", help="verify the vcan interface exists; create it via sudo if missing")
+    add_transport_args(p)
+    p.set_defaults(func=cmd_setup)
 
     p = sub.add_parser("sim", help="run the demo ECU simulator")
     add_transport_args(p)
