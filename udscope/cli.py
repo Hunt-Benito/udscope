@@ -393,7 +393,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("scan", help="probe standard diagnostic address slots for responders")
     add_transport_args(p)
-    p.set_defaults(func=cmd_scan)
+    p.set_defaults(func=cmd_scan, timeout=0.5)
 
     p = sub.add_parser("vin", help="read VIN (DID 0xF190)")
     add_transport_args(p)
