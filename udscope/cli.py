@@ -203,6 +203,35 @@ def cmd_secaccess(args) -> int:
 HISTORY_FILE = os.path.join(os.path.expanduser("~"), ".config", "udscope", "shell_history")
 
 
+SHELL_COMMANDS = ["session", "read-did", "did", "vin", "ident", "secaccess",
+                  "algorithms", "keepalive", "history", "reset", "help", "quit", "exit"]
+
+SHELL_ARG_CANDIDATES = {
+    "secaccess": lambda: ["--algo", "-a"] + sorted(security.REGISTRY.keys()),
+    "keepalive": lambda: ["on", "off"],
+    "session": lambda: ["0x01", "0x02", "0x03", "0x60"],
+    "read-did": lambda: ["0xF190", "0xF187", "0xF18A", "0xF195", "0xF22B", "0xF242"],
+    "did": lambda: ["0xF190", "0xF187", "0xF18A", "0xF195", "0xF22B", "0xF242"],
+}
+
+
+def shell_candidates(line_buffer: str, begidx: int, prefix: str):
+    words = line_buffer.split()
+    if begidx == 0 or not words:
+        return [c for c in SHELL_COMMANDS if c.startswith(prefix)]
+    verb = words[0]
+    options = SHELL_ARG_CANDIDATES.get(verb, lambda: [])()
+    return [o for o in options if o.startswith(prefix)]
+
+
+def _make_shell_completer():
+    def completer(prefix, index):
+        candidates = shell_candidates(readline.get_line_buffer(),
+                                      readline.get_begidx(), prefix)
+        return candidates[index] if index < len(candidates) else None
+    return completer
+
+
 def _init_readline_history() -> None:
     if readline is None:
         return
@@ -234,6 +263,11 @@ def cmd_shell(args) -> int:
     client = build_client(args)
     client.start_keepalive()
     _init_readline_history()
+    if readline is not None:
+        readline.set_completer(_make_shell_completer())
+        readline.set_completer_delims(" \t\n")
+        readline.parse_and_bind("tab: complete")
+        readline.parse_and_bind("set show-all-if-ambiguous on")
     session_history = []
     print(f"udscope {__version__} shell — target {args.target} on {args.bus}:{args.channel}")
     print("type 'help' for commands, raw UDS hex also works, Ctrl-D to quit")

@@ -61,3 +61,24 @@ def test_hexdump_partial_line_padding():
     out = hexdump(b"AB")
     assert "|AB|" in out
     assert "61" not in out.split("|")[0]
+
+
+def test_shell_completion_commands():
+    from udscope.cli import shell_candidates
+    assert shell_candidates("se", 0, "se") == ["session", "secaccess"]
+    assert shell_candidates("sc", 0, "sc") == []
+    assert shell_candidates("read", 0, "read") == ["read-did"]
+    assert shell_candidates("ke", 0, "ke") == ["keepalive"]
+    from udscope.cli import SHELL_COMMANDS
+    assert shell_candidates("", 0, "") == SHELL_COMMANDS
+
+
+def test_shell_completion_arguments():
+    from udscope.cli import shell_candidates
+    assert shell_candidates("keepalive o", 11, "o") == ["on", "off"]
+    algos = shell_candidates("secaccess xor", 11, "xor")
+    assert algos == ["xor_shift_demo"]
+    sessions = shell_candidates("session 0x0", 8, "0x0")
+    assert sessions == ["0x01", "0x02", "0x03"]
+    dids = shell_candidates("read-did 0xF2", 10, "0xF2")
+    assert "0xF242" in dids and "0xF22B" in dids
