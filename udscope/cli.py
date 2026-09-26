@@ -89,17 +89,20 @@ def cmd_scan(args) -> int:
         return 2
     bus = make_bus(args.channel, args.bus)
     found = 0
-    print(f"probing standard ISO 15765-4 slots on {args.bus}:{args.channel} ...")
+    worst = len(STANDARD_ECUs) * args.timeout
+    print(f"probing standard ISO 15765-4 slots on {args.bus}:{args.channel} "
+          f"(please wait, up to ~{worst:.0f} s — one timeout per silent slot) ...")
     for target in STANDARD_ECUs:
+        print(f"  0x{target.tx_id:03X}/0x{target.rx_id:03X} ", end="", flush=True)
         link = IsotpLink(target.tx_id, target.rx_id, bus=bus, logger=quiet_logger)
         link.start()
         client = UdsClient(link, timeout=args.timeout)
         try:
             resp = client.tester_present()
-            print(f"  0x{target.tx_id:03X}/0x{target.rx_id:03X}  RESPONDS ({resp.hex(' ')})")
+            print(f"-> responds ({resp.hex(' ')})")
             found += 1
         except (UdsTimeout, NegativeResponseError):
-            pass
+            print("-> no answer")
         finally:
             link.stop()
     print(f"{found} responding address(es)")
