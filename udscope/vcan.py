@@ -26,7 +26,7 @@ MANUAL_INSTRUCTIONS = """create the interface manually and retry:
 
 
 def _run(cmd: List[str]) -> "subprocess.CompletedProcess[bytes]":
-    return subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
 
 
 def interface_exists(channel: str, runner: Callable = _run) -> bool:
@@ -35,7 +35,7 @@ def interface_exists(channel: str, runner: Callable = _run) -> bool:
 
 def interface_is_up(channel: str, runner: Callable = _run) -> bool:
     result = runner(["ip", "-brief", "link", "show", channel])
-    if result.returncode != 0:
+    if result.returncode != 0 or result.stdout is None:
         return False
     return b"UP" in result.stdout
 

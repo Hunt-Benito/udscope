@@ -84,3 +84,9 @@ def test_down_interface_brought_up():
     sudo_cmds = [c for c in track if c[0] == "sudo"]
     assert len(sudo_cmds) == 1
     assert sudo_cmds[0][3:][:4] == ["ip", "link", "set", "up"]
+
+
+def test_default_runner_captures_stdout():
+    result = vcan._run(["echo", "UP"])
+    assert result.returncode == 0
+    assert result.stdout is not None and b"UP" in result.stdout
