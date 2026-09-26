@@ -287,7 +287,16 @@ def cmd_shell(args) -> int:
                     except (NegativeResponseError, UdsTimeout) as exc:
                         print(f"  {label:<12} 0x{did:04X}  [{exc}]")
             elif verb == "secaccess":
-                algo = security.get(rest[0]) if rest else security.get("xor_shift_demo")
+                name = "xor_shift_demo"
+                if rest:
+                    if rest[0] in ("--algo", "-a"):
+                        if len(rest) < 2:
+                            print("usage: secaccess [--algo] <name>")
+                            continue
+                        name = rest[1]
+                    else:
+                        name = rest[0]
+                algo = security.get(name)
                 resp = client.security_access(0x11, lambda seed: algo.fn(seed, 0x11))
                 print(f"security access GRANTED: {resp.hex(' ')}")
             elif verb == "algorithms":
@@ -332,7 +341,8 @@ SHELL_HELP = """commands:
   read-did <did>        read a data identifier (e.g. read-did F190)
   vin                   read the VIN
   ident                 read common identification DIDs
-  secaccess [algo]      run the 0x27 seed-key handshake (default xor_shift_demo)
+  secaccess [algo]       run the 0x27 seed-key handshake, e.g. secaccess xor_shift_demo
+                         (also accepts: secaccess --algo <name>)
   algorithms            list registered seed-key algorithms
   keepalive on|off      background TesterPresent (default: on)
   history [n]           show session command history (last n; up-arrow recalls it,

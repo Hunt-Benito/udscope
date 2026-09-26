@@ -1,3 +1,3 @@
 """udscope — UDS + scope: explore Unified Diagnostic Services (ISO 14229) over CAN."""
 
-__version__ = "0.3.2"
+__version__ = "0.3.3"
