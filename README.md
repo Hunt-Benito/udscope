@@ -58,7 +58,7 @@ Terminal 1 — start the demo ECU:
 ```console
 $ source .venv/bin/activate
 $ udscope sim
-udscope 0.3.5 — demo ECU on socketcan:vcan0 (requests 0x7E0, responses 0x7E8)
+udscope 0.3.6 — demo ECU on socketcan:vcan0 (requests 0x7E0, responses 0x7E8)
 Level 0x11 seed-key algorithm: xor_shift_demo | Ctrl-C to stop
 ```
 
@@ -67,7 +67,7 @@ Terminal 2 — the interactive shell (recommended; type `help` inside for all co
 ```console
 $ source .venv/bin/activate
 $ udscope shell
-udscope 0.3.5 shell — target demo on socketcan:vcan0
+udscope 0.3.6 shell — target demo on socketcan:vcan0
 type 'help' for commands, raw UDS hex also works, Ctrl-D to quit
 udscope> session 0x03
 udscope> read-did 0xF190
