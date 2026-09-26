@@ -269,6 +269,7 @@ def cmd_shell(args) -> int:
         readline.parse_and_bind("tab: complete")
         readline.parse_and_bind("set show-all-if-ambiguous on")
     session_history = []
+    last_session = Session.DEFAULT
     print(f"udscope {__version__} shell — target {args.target} on {args.bus}:{args.channel}")
     print("type 'help' for commands, raw UDS hex also works, Ctrl-D to quit")
     while True:
@@ -303,7 +304,9 @@ def cmd_shell(args) -> int:
                 else:
                     print("usage: keepalive on|off")
             elif verb == "session":
-                resp = client.set_session(int(rest[0], 0))
+                level = int(rest[0], 0) & 0x7F
+                resp = client.set_session(level)
+                last_session = level
                 print(f"session accepted: {resp.hex(' ')}")
             elif verb in ("read-did", "did"):
                 did = int(rest[0], 0)
@@ -331,8 +334,20 @@ def cmd_shell(args) -> int:
                     else:
                         name = rest[0]
                 algo = security.get(name)
-                resp = client.security_access(0x11, lambda seed: algo.fn(seed, 0x11))
-                print(f"security access GRANTED: {resp.hex(' ')}")
+                if last_session == Session.DEFAULT:
+                    print("(entering extended session 0x03 first — "
+                          "security access needs a non-default session)")
+                    client.set_session(Session.EXTENDED)
+                    last_session = Session.EXTENDED
+                try:
+                    resp = client.security_access(0x11, lambda seed: algo.fn(seed, 0x11))
+                    print(f"security access GRANTED: {resp.hex(' ')}")
+                except NegativeResponseError as exc:
+                    if exc.nrc == 0x7E:
+                        print(f"NRC {exc.nrc:02X}: {exc.description} — the ECU wants a "
+                              f"non-default session; run 'session 0x03' and try again")
+                    else:
+                        raise
             elif verb == "algorithms":
                 for algo in security.list_algorithms():
                     print(f"  {algo.name:<16} {algo.description}")
@@ -348,6 +363,7 @@ def cmd_shell(args) -> int:
                 print(out if out else "(no history yet)")
             elif verb == "reset":
                 resp = client.ecu_reset()
+                last_session = Session.DEFAULT
                 print(f"reset accepted: {resp.hex(' ')}")
             else:
                 tokens = line.replace(" ", "")
