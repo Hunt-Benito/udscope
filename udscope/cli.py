@@ -83,7 +83,7 @@ def cmd_setup(args) -> int:
         print("could not set up the interface automatically.\n"
               + MANUAL_INSTRUCTIONS.format(channel=args.channel), file=sys.stderr)
         return 1
-    print("automatic setup only manages vcan* channels on the socketcan interface —\n"
+    print("automatic setup only manages vcan* channels on the socketcan interface -\n"
           f"nothing to do for {args.bus}:{args.channel}", file=sys.stderr)
     return 1
 
@@ -93,7 +93,7 @@ def cmd_sim(args) -> int:
         return 2
     link = make_sim_link(args)
     ecu = DemoEcu(link)
-    print(f"udscope {__version__} — demo ECU on {args.bus}:{args.channel} "
+    print(f"udscope {__version__} - demo ECU on {args.bus}:{args.channel} "
           f"(requests 0x7E0, responses 0x7E8)")
     print("Level 0x11 seed-key algorithm: xor_shift_demo | Ctrl-C to stop")
     try:
@@ -111,7 +111,7 @@ def cmd_scan(args) -> int:
     found = 0
     worst = len(STANDARD_ECUs) * args.timeout
     print(f"probing standard ISO 15765-4 slots on {args.bus}:{args.channel} "
-          f"(please wait, up to ~{worst:.0f} s — one timeout per silent slot) ...")
+          f"(please wait, up to ~{worst:.0f} s - one timeout per silent slot) ...")
     for target in STANDARD_ECUs:
         print(f"  0x{target.tx_id:03X}/0x{target.rx_id:03X} ", end="", flush=True)
         link = IsotpLink(target.tx_id, target.rx_id, bus=bus, logger=quiet_logger)
@@ -270,7 +270,7 @@ def cmd_shell(args) -> int:
         readline.parse_and_bind("set show-all-if-ambiguous on")
     session_history = []
     last_session = Session.DEFAULT
-    print(f"udscope {__version__} shell — target {args.target} on {args.bus}:{args.channel}")
+    print(f"udscope {__version__} shell - target {args.target} on {args.bus}:{args.channel}")
     print("type 'help' for commands, raw UDS hex also works, Ctrl-D to quit")
     while True:
         try:
@@ -297,7 +297,7 @@ def cmd_shell(args) -> int:
                 flag = rest[0].lower() if rest else ""
                 if flag == "off":
                     client.stop_keepalive()
-                    print("keep-alive off — non-default sessions now expire after S3 (5 s)")
+                    print("keep-alive off - non-default sessions now expire after S3 (5 s)")
                 elif flag == "on":
                     client.start_keepalive()
                     print("keep-alive on")
@@ -335,7 +335,7 @@ def cmd_shell(args) -> int:
                         name = rest[0]
                 algo = security.get(name)
                 if last_session == Session.DEFAULT:
-                    print("(entering extended session 0x03 first — "
+                    print("(entering extended session 0x03 first - "
                           "security access needs a non-default session)")
                     client.set_session(Session.EXTENDED)
                     last_session = Session.EXTENDED
@@ -344,7 +344,7 @@ def cmd_shell(args) -> int:
                     print(f"security access GRANTED: {resp.hex(' ')}")
                 except NegativeResponseError as exc:
                     if exc.nrc == 0x7E:
-                        print(f"NRC {exc.nrc:02X}: {exc.description} — the ECU wants a "
+                        print(f"NRC {exc.nrc:02X}: {exc.description} - the ECU wants a "
                               f"non-default session; run 'session 0x03' and try again")
                     else:
                         raise

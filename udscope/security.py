@@ -48,7 +48,7 @@ def _rol32(value: int, n: int) -> int:
 
 
 def xor_shift_demo(seed: int, level: int = 0) -> int:
-    """Synthetic rotate/xor/add chain — the demo ECU's level 0x11 algorithm.
+    """Synthetic rotate/xor/add chain - the demo ECU's level 0x11 algorithm.
 
     Invented for udscope; deliberately built from the classic patterns found
     in real seed-key implementations (rotates, constant XOR, constant ADD) so
@@ -62,7 +62,7 @@ def xor_shift_demo(seed: int, level: int = 0) -> int:
 
 
 def table_mix_demo(seed: int, level: int = 0) -> int:
-    """Synthetic nibble-table mixer — a table-lookup pattern exercise.
+    """Synthetic nibble-table mixer - a table-lookup pattern exercise.
 
     Each nibble of the seed indexes a synthetic 16-entry table; results are
     accumulated with rotate mixing. Invented for udscope.

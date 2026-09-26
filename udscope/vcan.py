@@ -1,7 +1,7 @@
 """Automatic virtual CAN (vcan) interface management.
 
 Only channels whose name starts with ``vcan`` on the ``socketcan`` interface
-are managed — real hardware buses (can0, slcan, pcan, ...) are never touched.
+are managed - real hardware buses (can0, slcan, pcan, ...) are never touched.
 Creating a vcan interface requires root (module load + link creation), so a
 sudo password prompt is shown; the prompt text itself explains why root is
 needed. Set ``UDSCOPE_NO_AUTO_SETUP=1`` to disable automatic management.
@@ -16,7 +16,7 @@ from typing import Callable, List, Optional
 
 SUDO_PROMPT = (
     "udscope: root needed to create virtual CAN interface %s "
-    "(one-time: modprobe vcan, ip link add, ip link set up) — password for %%p: "
+    "(one-time: modprobe vcan, ip link add, ip link set up) - password for %%p: "
 )
 
 MANUAL_INSTRUCTIONS = """create the interface manually and retry:
@@ -53,7 +53,7 @@ def ensure_vcan(
     """Make sure ``channel`` exists and is up, creating it via sudo if needed.
 
     Returns True when the interface is ready. Returns False when creation was
-    not possible (missing tools, sudo declined/failed) — callers should print
+    not possible (missing tools, sudo declined/failed) - callers should print
     the manual instructions and abort.
     """
     if interface != "socketcan" or not channel.startswith("vcan"):
@@ -74,7 +74,7 @@ def ensure_vcan(
     steps.append(["ip", "link", "set", "up", channel])
 
     if not quiet:
-        print(f"[setup] {channel} is missing or down — "
+        print(f"[setup] {channel} is missing or down - "
               f"root privileges are required to create/enable the virtual CAN interface")
     if os.geteuid() == 0:
         for step in steps:

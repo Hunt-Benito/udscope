@@ -1,19 +1,19 @@
 # udscope
 
-**UDS + scope** — a Linux-first toolkit for exploring **Unified Diagnostic Services (ISO 14229)** over CAN (ISO-TP / ISO 15765-2), with a virtual ECU simulator so every exercise is reproducible **without any hardware**.
+**UDS + scope** - a Linux-first toolkit for exploring **Unified Diagnostic Services (ISO 14229)** over CAN (ISO-TP / ISO 15765-2), with a virtual ECU simulator so every exercise is reproducible **without any hardware**.
 
 udscope is the companion framework of the automotive security article series on [hunt-benito.com/blog](https://www.hunt-benito.com/blog). Each article extends it with the techniques it covers.
 
-> **Ethics & scope**: udscope is built for security research and education on systems **you own or are authorized to test** — bench ECUs, virtual buses, test benches. It contains no vendor security constants and ships only synthetic (or publicly published, cited) seed-key algorithms.
+> **Ethics & scope**: udscope is built for security research and education on systems **you own or are authorized to test** - bench ECUs, virtual buses, test benches. It contains no vendor security constants and ships only synthetic (or publicly published, cited) seed-key algorithms.
 
 ## Features
 
-- **UDS client** — request/response with negative-response (NRC) decoding, `0x78` response-pending handling, and helpers for the services you use most: session control, tester present, read/write DID, security access, read-memory-by-address.
-- **ECU simulator** (`udscope sim`) — a synthetic ECU on `vcan0` implementing a realistic UDS subset: session gating (default/extended/developer), security access with attempt limiting and lockout penalty, DID database, memory reads, S3 tester-present timeout.
-- **Pluggable seed-key registry** — register `seed -> key` algorithms and use them in the `0x27` handshake. Ships with synthetic exercises; add your own (from papers you are licensed to use) in one function.
-- **CLI** — `scan`, `ident`, `vin`, `session`, `read-did`, `secaccess`, `demo`, `algorithms`, `sweep-dids` (DID inventory), `dump` (memory-range dumper via 0x23), `shell` (interactive, stateful UDS console with keep-alive and raw-hex input), `setup` (vcan interface management).
-- **Session keep-alive** — optional background TesterPresent so long campaigns survive the S3 timeout on real ECUs.
-- **Library** — everything the CLI does is available programmatically (`UdsClient`, `IsotpLink`, `DemoEcu`).
+- **UDS client** - request/response with negative-response (NRC) decoding, `0x78` response-pending handling, and helpers for the services you use most: session control, tester present, read/write DID, security access, read-memory-by-address.
+- **ECU simulator** (`udscope sim`) - a synthetic ECU on `vcan0` implementing a realistic UDS subset: session gating (default/extended/developer), security access with attempt limiting and lockout penalty, DID database, memory reads, S3 tester-present timeout.
+- **Pluggable seed-key registry** - register `seed -> key` algorithms and use them in the `0x27` handshake. Ships with synthetic exercises; add your own (from papers you are licensed to use) in one function.
+- **CLI** - `scan`, `ident`, `vin`, `session`, `read-did`, `secaccess`, `demo`, `algorithms`, `sweep-dids` (DID inventory), `dump` (memory-range dumper via 0x23), `shell` (interactive, stateful UDS console with keep-alive and raw-hex input), `setup` (vcan interface management).
+- **Session keep-alive** - optional background TesterPresent so long campaigns survive the S3 timeout on real ECUs.
+- **Library** - everything the CLI does is available programmatically (`UdsClient`, `IsotpLink`, `DemoEcu`).
 
 ## Install
 
@@ -24,14 +24,14 @@ pip install git+https://github.com/Hunt-Benito/udscope
 
 Requires Python 3.9+, `python-can` and `can-isotp` (installed automatically).
 
-> **Note** — on Debian 12 / Ubuntu 23.04+ the system Python is "externally managed" (PEP 668) and
+> **Note** - on Debian 12 / Ubuntu 23.04+ the system Python is "externally managed" (PEP 668) and
 > `pip install` outside a virtualenv fails with `error: externally-managed-environment`. Use the
 > venv as shown above (or `pipx` if you only want the CLI).
 
 ## Set up a virtual CAN bus (no hardware needed)
 
 udscope manages `vcan*` interfaces automatically: every command verifies the
-interface first and, if it is missing or down, creates it via sudo — the sudo
+interface first and, if it is missing or down, creates it via sudo - the sudo
 prompt itself explains why root is required. To do it explicitly:
 
 ```bash
@@ -53,21 +53,21 @@ channels (`can0`, `slcan`, ...) are never touched.
 
 Both terminals must have the venv active (`source .venv/bin/activate` in each).
 
-Terminal 1 — start the demo ECU:
+Terminal 1 - start the demo ECU:
 
 ```console
 $ source .venv/bin/activate
 $ udscope sim
-udscope 0.3.6 — demo ECU on socketcan:vcan0 (requests 0x7E0, responses 0x7E8)
+udscope 0.3.7 - demo ECU on socketcan:vcan0 (requests 0x7E0, responses 0x7E8)
 Level 0x11 seed-key algorithm: xor_shift_demo | Ctrl-C to stop
 ```
 
-Terminal 2 — the interactive shell (recommended; type `help` inside for all commands):
+Terminal 2 - the interactive shell (recommended; type `help` inside for all commands):
 
 ```console
 $ source .venv/bin/activate
 $ udscope shell
-udscope 0.3.6 shell — target demo on socketcan:vcan0
+udscope 0.3.7 shell - target demo on socketcan:vcan0
 type 'help' for commands, raw UDS hex also works, Ctrl-D to quit
 udscope> session 0x03
 udscope> read-did 0xF190
@@ -78,7 +78,7 @@ The shell is **stateful**: one connection for the whole session, with a backgrou
 TesterPresent keeping non-default sessions alive past the S3 timeout (5 s). Command
 history works like bash: up-arrow recalls, `history [n]` prints, and entries persist
 across sessions in `~/.config/udscope/shell_history`. Use
-`keepalive off` inside the shell to stop the background pinger — then non-default
+`keepalive off` inside the shell to stop the background pinger - then non-default
 sessions expire after 5 s of silence, which is the standard way to observe S3
 behaviour (`keepalive on` re-enables it). Library users get the same control via
 `UdsClient.start_keepalive()` / `stop_keepalive()`.
@@ -112,7 +112,7 @@ udscope algorithms           # list registered seed-key algorithms
 
 Every transport command takes `--bus` / `--channel` (defaults: `socketcan` / `vcan0`) and `--target` (a named target or a raw request ID, e.g. `--target 0x7E1`).
 
-> **Note on the `virtual` bus**: python-can's `virtual` interface is **in-process only** — use it for tests and library experiments, not between two terminals. Across terminals use `vcan0` as shown above.
+> **Note on the `virtual` bus**: python-can's `virtual` interface is **in-process only** - use it for tests and library experiments, not between two terminals. Across terminals use `vcan0` as shown above.
 
 ## Library use
 
@@ -156,4 +156,4 @@ pytest
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).

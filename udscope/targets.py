@@ -1,4 +1,4 @@
-"""ECU target definitions — ISO-TP address pairs for known/demo targets."""
+"""ECU target definitions - ISO-TP address pairs for known/demo targets."""
 
 from __future__ import annotations
 

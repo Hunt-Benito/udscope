@@ -1,4 +1,4 @@
-"""A synthetic UDS ECU simulator — the virtual target every demo talks to.
+"""A synthetic UDS ECU simulator - the virtual target every demo talks to.
 
 The demo ECU implements a small, realistic subset of ISO 14229:
 
@@ -7,7 +7,7 @@ The demo ECU implements a small, realistic subset of ISO 14229:
 * 0x22 read data by identifier (VIN, IDs, session-gated DIDs)
 * 0x23 read memory by address (developer session + unlocked only)
 * 0x27 security access (level 0x11 seed / 0x12 key, synthetic algorithm,
-  3 attempts then a 10 s penalty — NRC 0x36 / 0x37 behaviour)
+  3 attempts then a 10 s penalty - NRC 0x36 / 0x37 behaviour)
 * 0x3E tester present (S3 timeout of 5 s relocks and drops to default session)
 """
 
