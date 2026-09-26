@@ -40,3 +40,24 @@ def test_history_file_round_trip(monkeypatch, tmp_path):
     cli.readline.clear_history()
     cli._init_readline_history()
     assert cli.readline.get_history_item(1) == "session 0x03"
+
+
+def test_ascii_repr():
+    from udscope.cli import ascii_repr
+    assert ascii_repr(b"\x62\xf2\x2b\x00\x64\x00\xc8") == "b.+.d.."
+    assert ascii_repr(b"UDSCOPE") == "UDSCOPE"
+
+
+def test_hexdump_format():
+    from udscope.cli import hexdump
+    out = hexdump(b"UDSCOPE DEMO FIR")
+    lines = out.splitlines()
+    assert lines[0].startswith("  00000000: 55 44 53")
+    assert lines[0].endswith("|UDSCOPE DEMO FIR|")
+
+
+def test_hexdump_partial_line_padding():
+    from udscope.cli import hexdump
+    out = hexdump(b"AB")
+    assert "|AB|" in out
+    assert "61" not in out.split("|")[0]

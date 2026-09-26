@@ -49,6 +49,20 @@ def build_client(args) -> UdsClient:
     return UdsClient(link, timeout=args.timeout)
 
 
+def ascii_repr(data: bytes) -> str:
+    return "".join(chr(b) if 32 <= b < 127 else "." for b in data)
+
+
+def hexdump(data: bytes, width: int = 16) -> str:
+    lines = []
+    for off in range(0, len(data), width):
+        chunk = data[off:off + width]
+        hexpart = " ".join(f"{b:02x}" for b in chunk)
+        pad = " " * (3 * (width - len(chunk)))
+        lines.append(f"  {off:08X}: {hexpart}{pad}  |{ascii_repr(chunk)}|")
+    return "\n".join(lines)
+
+
 def quiet_logger(direction: str, arb_id: int, data: bytes) -> None:
     pass
 
@@ -159,9 +173,7 @@ def cmd_read_did(args) -> int:
     client = build_client(args)
     try:
         resp = client.read_did(args.did)
-        print(f"0x{args.did:04X}: {resp.hex(' ')}")
-        if len(resp) > 3:
-            print(f"       ascii: {resp[3:].decode('ascii', errors='replace')!r}")
+        print(f"0x{args.did:04X}: {resp.hex(' ')}  |{ascii_repr(resp)}|")
     except (NegativeResponseError, UdsTimeout) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
@@ -262,7 +274,7 @@ def cmd_shell(args) -> int:
             elif verb in ("read-did", "did"):
                 did = int(rest[0], 0)
                 resp = client.read_did(did)
-                print(f"0x{did:04X}: {resp.hex(' ')}")
+                print(f"0x{did:04X}: {resp.hex(' ')}  |{ascii_repr(resp)}|")
             elif verb == "vin":
                 print(client.read_vin())
             elif verb == "ident":
@@ -352,8 +364,7 @@ def cmd_sweep_dids(args) -> int:
             except UdsTimeout:
                 continue
             data = resp[3:]
-            printable = "".join(chr(b) if 32 <= b < 127 else "." for b in data[:24])
-            print(f"  0x{did:04X}  len={len(data):3d}  {data[:16].hex(' '):<49}  |{printable}|")
+            print(f"  0x{did:04X}  len={len(data):3d}  {data[:16].hex(' '):<49}  |{ascii_repr(data[:24])}|")
             found += 1
         print(f"{found} DIDs responded")
         return 0
@@ -397,6 +408,10 @@ def cmd_dump(args) -> int:
         with open(args.out, "wb") as fh:
             fh.write(blob)
         print(f"wrote {len(blob)} bytes to {args.out}")
+        preview = bytes(blob[:128])
+        print(hexdump(preview))
+        if len(blob) > len(preview):
+            print(f"  ... {len(blob) - len(preview)} more bytes in {args.out}")
         return 0
     finally:
         client.stop_keepalive()
